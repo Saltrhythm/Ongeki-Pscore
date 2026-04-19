@@ -1,4 +1,4 @@
-const GAS_URL = "const GAS_URL = "https://script.google.com/macros/s/AKfycbwAZPIT6MGkDCVti9nz-qJOXSz6vq2RkXoWQLxyWt0pwRUMd1IiWBxuKSFGUyYhfeh3/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwAZPIT6MGkDCVti9nz-qJOXSz6vq2RkXoWQLxyWt0pwRUMd1IiWBxuKSFGUyYhfeh3/exec";
 
 let allScores = []; 
 
