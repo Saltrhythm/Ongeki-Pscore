@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オンゲキPスコア管理ツール</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>オンゲキPスコア管理ツール</h1>
+
+    <div class="search-container">
+    <div class="filter-controls">
+
+        <div class="filter-group">
+        <label for="user-select">PLAYER:</label>
+        <select id="user-select" class="const-select">
+        <option value="">読込中...</option>
+        </select>
+        </div>
+
+        <input type="text" id="search-input" placeholder="曲名で検索...">
+
+        <div class="filter-group">
+            <span class="filter-label">定数</span>
+            <select id="min-constant" class="const-select"></select>
+            <span class="range-separator">〜</span>
+            <select id="max-constant" class="const-select"></select>
+        </div>
+
+        <button id="clear-filter" class="btn-reset">リセット</button>
+    </div>
+</div>
+
+    </div>
+
+    <div id="loading">データを取得中...</div>
+
+<div class="table-container">
+    <table>
+        
+    <thead>
+    <tr>
+        <th style="width: 35%; text-align: left;">楽曲情報</th>
+        <th style="width: 25%; text-align: center;">Pスコア</th>
+        <th style="width: 25%; text-align: center;">達成率</th>
+        <th style="width: 15%; text-align: right; padding-right: 15px;">次のランクまで</th>
+    </tr>
+    </thead>
+        
+        <tbody id="score-body">
+            </tbody>
+    </table>
+</div>
+
+    <script src="script.js"></script>
+</body>
+</html>
