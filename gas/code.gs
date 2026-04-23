@@ -1,146 +1,118 @@
 /**
- * ブックマークレットからのデータ受信（POST）
- * 譜面定数直接引き当て ＆ レート計算実装版
+ * 最終解決版：記号・全角半角・特殊文字をすべて排除して比較
  */
 function doPost(e) {
-  const contents = JSON.parse(e.postData.contents);
-  const userName = contents.userName || "Unknown";
-  const dataList = contents.scores || []; 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  // 1. 譜面定数表をメモリにロード（A列：キー、E列：定数）
-  const constSheet = ss.getSheetByName('譜面定数表');
-  const constValues = constSheet.getDataRange().getValues();
-  const constMap = new Map();
-  for (let i = 0; i < constValues.length; i++) {
-    const rowKey = String(constValues[i][0]).trim(); // A列: タイトル+難易度+レベル
-    const val = parseFloat(constValues[i][4]);      // E列: 譜面定数
-    if (rowKey) constMap.set(rowKey, val);
-  }
+  try {
+    const contents = JSON.parse(e.postData.contents);
+    const userName = contents.userName || "Unknown";
+    const dataList = contents.scores || []; 
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    const constSheet = ss.getSheetByName('譜面定数表');
+    if (!constSheet) return ContentService.createTextOutput("Error: 譜面定数表なし");
+    
+    const constValues = constSheet.getDataRange().getValues();
+    const constMap = new Map();
+    
+    // 文字列を「英数字と日本語のみ」に削ぎ落とす関数
+    const cleanKey = (str) => {
+      if (!str) return "";
+      // 1. 全角を半角にする
+      const half = str.replace(/[！-～]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+      // 2. スペース、中黒、記号、句読点をすべて削除（漢字・ひらがな・カタカナ・英数字以外を消す）
+      return half.replace(/[^a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g, "").toLowerCase();
+    };
 
-  // 2. ユーザー用シートの準備
-  let sheet = ss.getSheetByName(userName);
-  if (!sheet) {
-    sheet = ss.insertSheet(userName);
-    sheet.appendRow(["更新日時", "曲名", "難易度", "レベル", "テクニカルスコア", "Pスコア", "Pスコア理論値", "譜面定数", "PスコアRating", "FB", "Combo", "Rank", "単曲レート"]);
-  }
-  
-  let fullData = sheet.getDataRange().getValues();
-  const rowMap = new Map();
-  for (let i = 1; i < fullData.length; i++) {
-    const key = fullData[i][1] + "|" + fullData[i][2]; // 曲名|難易度
-    rowMap.set(key, i);
-  }
-  
-  const now = new Date();
-  const newRows = [];
-
-  // 3. データ処理ループ
-  dataList.forEach(data => {
-    // 譜面定数の直接取得
-    const lookupKey = data.title + data.difficulty + data.level;
-    const constant = constMap.get(lookupKey) || 0;
-
-    const key = data.title + "|" + data.difficulty;
-    const index = rowMap.get(key);
-
-    // Pスコア用の★判定
-    let star = 0;
-    if (data.platinumMax > 0) {
-      const rate = data.platinumScore / data.platinumMax;
-      if (rate >= 0.98) star = 5;
-      else if (rate >= 0.97) star = 4;
-      else if (rate >= 0.96) star = 3;
-      else if (rate >= 0.95) star = 2;
-      else if (rate >= 0.94) star = 1;
+    // 1. 定数表の読み込み
+    for (let i = 0; i < constValues.length; i++) {
+      const normalizedKey = cleanKey(String(constValues[i][0]));
+      const val = parseFloat(constValues[i][4]); 
+      if (normalizedKey) {
+        constMap.set(normalizedKey, val);
+      }
     }
 
-    const fbStatus = data.fbLamp ? "FB" : "";
-    const comboStatus = data.comboLamp || "None";
-    const rankStatus = data.rankLamp || "None";
+    let sheet = ss.getSheetByName(userName);
+    if (!sheet) {
+      sheet = ss.insertSheet(userName);
+      sheet.appendRow(["更新日時", "曲名", "難易度", "レベル", "テクニカルスコア", "Pスコア", "Pスコア理論値", "譜面定数", "PスコアRating", "FB", "Combo", "Rank", "単曲レート"]);
+    }
+    
+    let fullData = sheet.getDataRange().getValues();
+    const rowMap = new Map();
+    for (let i = 1; i < fullData.length; i++) {
+      rowMap.set(fullData[i][1] + "|" + fullData[i][2], i);
+    }
+    
+    const now = new Date();
+    const newRows = [];
 
-    // テクニカルレートの計算（確定したconstantを使用）
-    const techRating = calculateTechRating(data.technicalScore, constant, data.fbLamp, comboStatus, rankStatus);
+    // 2. データ処理ループ
+    dataList.forEach(data => {
+      if (data.title.includes("ソロver.") || data.title.includes("ソロ")) return;
 
-    if (index !== undefined) {
-      // 既存データの更新
-      const r = index + 1;
-      const ratingPFormula = `=( ${star} * (H${r}^2) ) / 1000`;
+      // 送信データ側も徹底的にクリーンアップ
+      const searchKey = cleanKey(data.title + data.difficulty + data.level);
       
-      fullData[index] = [
+      let constant = constMap.get(searchKey);
+      let displayConstant = constant || "未発見:" + searchKey;
+
+      const key = data.title + "|" + data.difficulty;
+      const index = rowMap.get(key);
+
+      let star = 0;
+      if (data.platinumMax > 0) {
+        const rate = data.platinumScore / data.platinumMax;
+        if (rate >= 0.98) star = 5;
+        else if (rate >= 0.97) star = 4;
+        else if (rate >= 0.96) star = 3;
+        else if (rate >= 0.95) star = 2;
+        else if (rate >= 0.94) star = 1;
+      }
+      
+      const techRating = calculateTechRating(data.technicalScore, constant || 0, data.fbLamp, data.comboLamp, data.rankLamp);
+
+      const rowData = [
         now, data.title, data.difficulty, data.level,
         data.technicalScore, data.platinumScore, data.platinumMax, 
-        constant, // 数値として直接上書き
-        ratingPFormula,
-        fbStatus, comboStatus, rankStatus, techRating
+        displayConstant, 
+        `=( ${star} * (IF(ISNUMBER(H${index ? index+1 : fullData.length + newRows.length + 1}), H${index ? index+1 : fullData.length + newRows.length + 1}, 0)^2) ) / 1000`, 
+        data.fbLamp ? "FB" : "", data.comboLamp, data.rankLamp, techRating
       ];
-    } else {
-      // 新規曲の追加
-      const r = fullData.length + newRows.length + 1;
-      const ratingPFormula = `=( ${star} * (H${r}^2) ) / 1000`;
-      
-      newRows.push([
-        now, data.title, data.difficulty, data.level,
-        data.technicalScore, data.platinumScore, data.platinumMax, 
-        constant, // 直接数値をいれる
-        ratingPFormula,
-        fbStatus, comboStatus, rankStatus, techRating
-      ]);
-    }
-  });
 
-  // 4. まとめて書き込み（M列：13列目まで）
-  const finalData = fullData.concat(newRows);
-  sheet.getRange(1, 1, finalData.length, 13).setValues(finalData);
+      if (index !== undefined) fullData[index] = rowData;
+      else newRows.push(rowData);
+    });
 
-  // キャッシュクリア
-  const cache = CacheService.getScriptCache();
-  cache.remove("data_" + userName);
-  cache.remove("user_list_all");
-  
-  return ContentService.createTextOutput("Success");
+    const finalData = fullData.concat(newRows);
+    sheet.getRange(1, 1, finalData.length, 13).setValues(finalData);
+    
+    return ContentService.createTextOutput("Success");
+  } catch (err) {
+    return ContentService.createTextOutput("Failed: " + err.toString());
+  }
 }
 
+
 /**
- * 単曲Rating(Tech)の計算ロジック（定数加算＆切り捨て修正版）
+ * 単曲Rating(Tech)の計算ロジック
  */
 function calculateTechRating(score, constant, isFb, combo, rank) {
   const s = Number(score);
   const c = Number(constant);
-  
-  // 80万点未満はレート対象外（0）
-  if (s < 800000) return 0;
+  if (s < 800000 || c === 0) return 0;
   
   let base = 0;
+  if (s >= 1010000) base = c + 2.0 + (s - 1010000) / 10 * 0.001;
+  else if (s >= 1007500) base = c + 1.75 + (s - 1007500) / 10 * 0.001;
+  else if (s >= 1000000) base = c + 1.25 + (s - 1000000) / 15 * 0.001;
+  else if (s >= 990000) base = c + 0.75 + (s - 990000) / 20 * 0.001;
+  else if (s >= 970000) base = c + 0.0 + (s - 970000) / (80/3) * 0.001;
+  else if (s >= 900000) base = c - 4.0 + (s - 900000) / 17.5 * 0.001;
+  else if (s >= 800000) base = c - 6.0 + (s - 800000) / 50 * 0.001;
   
-  // 1. ベース値の計算（譜面定数 c を基点に加算）
-  if (s >= 1010000) {
-    // 101万〜：定数+2.0 + (10につき0.001)
-    base = c + 2.0 + (s - 1010000) / 10 * 0.001;
-  } else if (s >= 1007500) {
-    // 100.75万〜：定数+1.75 + (10につき0.001)
-    base = c + 1.75 + (s - 1007500) / 10 * 0.001;
-  } else if (s >= 1000000) {
-    // 100万〜：定数+1.25 + (15につき0.001)
-    base = c + 1.25 + (s - 1000000) / 15 * 0.001;
-  } else if (s >= 990000) {
-    // 99万〜：定数+0.75 + (20につき0.001)
-    base = c + 0.75 + (s - 990000) / 20 * 0.001;
-  } else if (s >= 970000) {
-    // 97万〜：定数±0.0 + (26.666...につき0.001)
-    base = c + 0.0 + (s - 970000) / (80/3) * 0.001;
-  } else if (s >= 900000) {
-    // 90万〜：定数-4.0 + (17.5につき0.001)
-    base = c - 4.0 + (s - 900000) / 17.5 * 0.001;
-  } else if (s >= 800000) {
-    // 80万〜：定数-6.0 + (50につき0.001)
-    base = c - 6.0 + (s - 800000) / 50 * 0.001;
-  }
-  
-  // 2. ランプ加点（累積）
   let bonus = 0;
   if (isFb) bonus += 0.050;
-  
   if (combo === "AB+") bonus += 0.350;
   else if (combo === "AB") bonus += 0.300;
   else if (combo === "FC") bonus += 0.100;
@@ -149,9 +121,6 @@ function calculateTechRating(score, constant, isFb, combo, rank) {
   else if (rank === "SSS") bonus += 0.200;
   else if (rank === "SS") bonus += 0.100;
   
-  // 小数第4位以下を切り捨てて第3位までにする
-  // (浮動小数点の誤差を防ぐため、1000000倍して丸めてから戻すなどの処理も検討されますが、
-  // シンプルに 1000倍 -> floor -> 1000割 で対応します)
   return Math.floor((base + bonus + 0.000001) * 1000) / 1000;
 }
 
