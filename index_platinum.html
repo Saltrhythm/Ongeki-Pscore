@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オンゲキPスコア管理ツール</title>
+    <link rel="stylesheet" href="style_platinum.css">
+</head>
+
+<body>
+
+    <h1>オンゲキPスコア管理ツール</h1>
+
+    <div class="p-score-wrapper">
+        <div class="p-score-display-box">
+            <span id="p-score-average">読み込み中...</span>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <div class="filter-controls">
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="user-select" class="filter-label">PLAYER:</label>
+                    <select id="user-select" class="filter-select">
+                        <option value="">読込中...</option>
+                    </select>
+                </div>
+                <input type="text" id="search-input" placeholder="曲名で検索...">
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <button id="clear-filter" class="btn-reset">リセット</button>
+                    <label for="star-filter" class="filter-label">★</label>
+                    <select id="star-filter" class="filter-select">
+                        <option value="all">すべて</option>
+                        <option value="rainbow">★5 (虹)</option>
+                        <option value="star5">★5 (金)</option>
+                        <option value="star4">★4</option>
+                        <option value="star3">★3</option>
+                        <option value="star2">★2</option>
+                        <option value="star1">★1</option>
+                    </select>
+
+                    <label for="min-constant" class="filter-label">定数</label>
+                    <select id="min-constant" class="filter-select"></select>
+                    <span class="range-separator">〜</span>
+                    <select id="max-constant" class="filter-select"></select>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <span class="filter-label">ソートの種類:</span>
+                    <button id="sort-pRating" class="btn-sort active">Rating順</button>
+                    <button id="sort-percent" class="btn-sort">達成率順</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="loading">データを取得中...</div>
+
+    <div class="table-container">
+        <table>
+
+            <thead>
+                <tr id="table-header">
+                </tr>
+            </thead>
+
+            <tbody id="score-body">
+            </tbody>
+        </table>
+    </div>
+
+    <script src="script_platinum.js"></script>
+</body>
+</html>
