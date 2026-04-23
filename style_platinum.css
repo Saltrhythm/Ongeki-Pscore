@@ -1,0 +1,599 @@
+/* 全体の背景と余白 */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f0f4f8;
+    padding: 20px;
+    margin: 0;
+}
+
+h1 {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    font-family: "Segoe UI", Roboto, sans-serif;
+    color: #333;
+}
+
+.p-score-wrapper {
+    text-align: center;
+    width: 100%;
+}
+
+.p-score-display-box {
+    padding: 12px 25px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 50px;
+    /* 洗練されたカプセル形状 */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    display: inline-flex;
+    /* 中身の長さに合わせつつ中央寄せ */
+    align-items: center;
+    justify-content: center;
+    border-bottom: 4px solid #d63384;
+    /* 下部にアクセントカラー */
+}
+
+#p-score-value {
+    /* 指定のフォント設定 */
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+
+    font-size: 16px;
+    color: #333;
+    font-weight: 500;
+    /* 全体は中太 */
+}
+
+/* 数値部分をさらに強調するためのテクニック */
+.highlight-number {
+    font-size: 1.2em;
+    /* 数値だけ一回り大きく */
+    font-weight: 800;
+    /* 数値だけ極太に */
+    color: #d63384;
+    /* アクセントカラーと同色に */
+    margin-left: 4px;
+}
+
+/* 検索・フィルター固定エリア */
+.search-container {
+    position: sticky;
+    top: 0;
+    background: #f0f4f8;
+    padding: 10px 15px 20px 15px;
+    /* 左右に少し余白を追加 */
+    z-index: 100;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    /* 少し影をつけて浮かせると見やすい */
+}
+
+#search-input {
+    flex: 1;
+    min-width: 180px;
+    max-width: 350px;
+    padding: 0 20px;
+    /* 左右の余白を多めにとるとカプセル感が出ます */
+    height: 42px;
+    /* フィルターグループの 42px と合わせる */
+    border: 1px solid #ddd;
+    border-radius: 30px;
+    box-sizing: border-box;
+    margin-bottom: 0;
+    /* flex-wrapで自然に落ちるので0でOK */
+    font-size: 16px;
+    background: #fff;
+}
+
+/* フィルタ全体を包むコンテナ */
+.filter-controls {
+    display: flex;
+    flex-direction: column;
+    /* 段を縦に並べる */
+    gap: 12px;
+    align-items: center;
+    /* 中央寄せ */
+
+    /* --- 全体スクロールの設定 --- */
+    overflow-x: auto;
+    /* 全体で横スクロールを許可 */
+    flex-wrap: nowrap;
+    /* 絶対に折り返さない */
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+
+    /* スクロールバーを隠す（任意） */
+    scrollbar-width: none;
+}
+
+/* 各段（行）の設定 */
+.filter-row {
+    display: flex;
+    flex-wrap: nowrap;
+    /* 行の中でも折り返し禁止 */
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    /* 中央寄せ */
+
+    /* --- スクロール機能を解除 --- */
+    overflow-x: visible;
+    /* 子要素がはみ出ても、自分ではスクロールさせない */
+    min-width: max-content;
+    /* 中身の横幅を確保し、圧縮されないようにする */
+}
+
+/* スマホで左端が切れないようにする対策 */
+@media (max-width: 600px) {
+    .filter-controls {
+        align-items: flex-start;
+        /* スマホでは左端から表示（スクロール開始位置のため） */
+    }
+
+    .filter-row {
+        justify-content: flex-start;
+        /* 行も左寄せに */
+        padding: 0 15px;
+        /* 左右に少し余白 */
+    }
+}
+
+/* 各パーツが潰れないように固定（必須） */
+.filter-group,
+#search-input,
+.btn-reset,
+.btn-sort {
+    flex-shrink: 0;
+}
+
+/* 定数グループ（カプセルデザイン） */
+.filter-group {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    padding: 0 15px;
+    border-radius: 30px;
+    border: 1px solid #ddd;
+    height: 42px;
+    box-sizing: border-box;
+
+    /* スマホで横幅がいっぱいになったら自然に折り返せるようにする */
+    min-width: fit-content;
+}
+
+/* セレクトボックスの見た目（枠を消してグループに馴染ませる） */
+.filter-select {
+    border: none;
+    background: transparent;
+    font-size: 0.95rem;
+    /* 1remだと少し大きい場合があるので微調整 */
+    padding: 0 5px;
+    /* 横に少し隙間を作る */
+    cursor: pointer;
+    outline: none;
+    height: 100%;
+    /* 親の高さに合わせる */
+}
+
+/* ラベルの左側に少し余白を作る（ランクと定数の間を空ける） */
+.filter-group .filter-label {
+    font-weight: bold;
+    font-size: 0.85rem;
+    color: #666;
+    margin-right: 5px;
+}
+
+/* 最初のラベルだけは左余白をなくして左端に揃える */
+.filter-group .filter-label:not(:first-child) {
+    margin-left: 15px;
+    border-left: 1px solid #eee;
+    /* 縦棒を入れると区切りが明確になります */
+    padding-left: 15px;
+}
+
+/* ランクと定数の間の区切り線をスマホでは消す、または調整する */
+@media (max-width: 480px) {
+    .filter-group .filter-label:not(:first-child) {
+        margin-left: 10px;
+        padding-left: 10px;
+        border-left: 1px solid #eee;
+    }
+
+    /* 文字サイズを少し小さくして収まりを良くする */
+    .filter-label,
+    .filter-select {
+        font-size: 0.80rem;
+    }
+}
+
+/* リセットボタン（定数グループとデザインを合わせる） */
+.btn-reset {
+    height: 42px;
+    padding: 10px 15px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #555;
+    font-weight: bold;
+    transition: all 0.2s;
+    white-space: nowrap;
+    /* 改行防止 */
+    box-sizing: border-box;
+}
+
+.btn-reset:hover {
+    background: #f0f0f0;
+    border-color: #bbb;
+}
+
+/* ソートボタン（リセットボタンのデザインを継承） */
+.btn-sort {
+    height: 42px;
+    /* リセットボタンと高さを合わせる */
+    padding: 0 20px;
+    /* 左右の余白を調整 */
+    background: #fff;
+    /* 通常時は白 */
+    border: 1px solid #ddd;
+    border-radius: 30px;
+    /* リセットボタンと同じ丸み */
+    cursor: pointer;
+    font-size: 14px;
+    color: #555;
+    font-weight: bold;
+    transition: all 0.2s;
+    white-space: nowrap;
+    box-sizing: border-box;
+    display: inline-flex;
+    /* 文字を中央に配置するため */
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-sort:hover {
+    background: #f0f0f0;
+    border-color: #bbb;
+}
+
+/* 選択されている（Active）状態のデザイン */
+.btn-sort.active {
+    background: #555;
+    /* 濃いグレーで「選択中」を表現 */
+    color: #fff;
+    /* 文字を白抜きに */
+    border-color: #555;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    /* 少し浮き上がらせる */
+}
+
+/* --- テーブルの外枠（スマホで横スクロールできるようにする） --- */
+.table-container {
+    overflow-x: auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+    /* 慣性スクロール（iOS用） */
+    -webkit-overflow-scrolling: touch;
+    /* スクロールバーを隠す（フィルター側と合わせる場合） */
+    scrollbar-width: none;
+}
+
+.table-container::-webkit-scrollbar {
+    display: none;
+    /* Chrome, Safari用 */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    /* 列の幅を固定 */
+    min-width: 500px;
+    /* 項目数に合わせて少し広めに設定（550〜600pxがおすすめ） */
+}
+
+/* ヘッダー（見出し）の設定 */
+th {
+    position: sticky;
+    top: 0;
+    background: #f8f9fa;
+    padding: 12px;
+    font-size: 0.8em;
+    color: #666;
+    border-bottom: 2px solid #eee;
+    text-align: center;
+    z-index: 10;
+}
+
+/* セルの基本設定 */
+td {
+    padding: 10px 5px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+    text-align: center;
+    /* 基本は中央、曲名だけ左などの調整がおすすめ */
+}
+
+td:first-child {
+    text-align: left;
+}
+
+/* PCでの基本設定（合計100%） */
+th:nth-child(1),
+td:nth-child(1) {
+    width: 20%;
+}
+
+/* 曲名 */
+th:nth-child(2),
+td:nth-child(2) {
+    width: 15%;
+}
+
+/* Pスコア */
+th:nth-child(3),
+td:nth-child(3) {
+    width: 20%;
+}
+
+/* 3列目（Rating or 達成率） */
+th:nth-child(4),
+td:nth-child(4) {
+    width: 20%;
+}
+
+/* 次の★まで */
+th:nth-child(5),
+td:nth-child(5) {
+    width: 25%;
+}
+
+/* 5列目（達成率 or Rating） */
+
+/* スマホ用：横スクロール前提なら、%ではなくpx指定でも安定します */
+@media screen and (max-width: 480px) {
+
+    th:nth-child(1),
+    td:nth-child(1) {
+        width: 70px;
+    }
+
+    th:nth-child(2),
+    td:nth-child(2) {
+        width: 60px;
+        font-size: 0.85em;
+    }
+
+    th:nth-child(3),
+    td:nth-child(3) {
+        width: 70px;
+    }
+
+    th:nth-child(4),
+    td:nth-child(4) {
+        width: 70px;
+    }
+
+    th:nth-child(5),
+    td:nth-child(5) {
+        width: 70px;
+    }
+}
+
+/* 難易度別の左端ライン（trに対して色を塗る） */
+tr.master td:first-child {
+    border-left: 6px solid #92278f;
+}
+
+tr.expert td:first-child {
+    border-left: 6px solid #f02d7d;
+}
+
+tr.lunatic td:first-child {
+    border-left: 6px solid #a0a0a0;
+}
+
+/* 曲名とレベルの見た目 */
+.title-cell {
+    display: block;
+    font-weight: bold;
+    font-size: 0.95em;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.diff-level-cell {
+    font-size: 0.75em;
+    color: #555;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+/* Pスコアの列 */
+.p-score-cell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* 達成率の列 */
+.p-percent-cell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* Pスコア内の数値（/の前後）を綺麗に見せるための調整 */
+.p-values {
+    display: inline-flex;
+    /* 内容物に合わせて幅を決める */
+    align-items: baseline;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 達成率内の%と星を綺麗に見せるための調整 */
+.p-percent {
+    font-variant-numeric: tabular-nums;
+}
+
+/* 2. 達成率（%）の微調整 */
+.p-percent {
+    font-size: 1.00rem;
+    font-weight: bold;
+    color: #333;
+    /* 星との間に少し余裕を作る */
+    margin-right: 2px;
+}
+
+/* 3. Pスコア実数の微調整 */
+.plat-val {
+    color: #444;
+    font-weight: bold;
+    /* font-familyは親の .p-values から引き継がれます */
+}
+
+.plat-sub {
+    font-size: 0.75em;
+    color: #999;
+    font-weight: normal;
+}
+
+/* 星の共通設定 */
+.p-star {
+    font-size: 0.90rem;
+    font-weight: bold;
+    margin-left: 4px;
+    display: inline-block;
+}
+
+/* --- 星のランク別カラー設定 --- */
+
+/* ★0: 未到達（アイアンブラック） */
+.star-none {
+    color: #444444;
+    /* 濃いグレー */
+    font-weight: bold;
+    text-shadow: 0px 1px 0px rgba(255, 255, 255, 0.1);
+    /* ほんの少しだけ浮かせる */
+    opacity: 0.8;
+}
+
+/* ★1: 重厚で暗めのブロンズゴールド（視認性は保ちつつ彩度を落とす） */
+.star-shine-1 {
+    color: #8a6d3b;
+}
+
+/* ★2: 暗めのゴールド + わずかな立体感 */
+.star-shine-2 {
+    background: linear-gradient(to bottom, #a67c00, #5e4500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ★3: 標準的なゴールド（中庸な明るさ） */
+.star-shine-3 {
+    background: linear-gradient(to bottom, #d4af37, #8a6d3b);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ★4: シャンパンゴールド（中間を明るい黄色に） */
+.star-shine-4 {
+    background: linear-gradient(to bottom, #fff9d6 0%, #ffd700 50%, #d4af37 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* 黒い影ではなく、オレンジ系の光で「暖かみ」を出す */
+    filter: drop-shadow(0 0 1px rgba(255, 165, 0, 0.4));
+}
+
+/* ★5 (98%): プレミアムゴールド（ハイライトを増やし、影を暖色に） */
+.star-shine-5 {
+    background: linear-gradient(135deg, #ffffff 0%, #fff3b0 25%, #ffcc00 60%, #e6b800 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* ぼんやりとした黄金の残光を追加 */
+    filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
+    font-weight: 900;
+}
+
+/* ★5 (99%): 虹色（暗さを取り除き、少し発光させる） */
+.star-rainbow {
+    background: linear-gradient(to right,
+            #f73636, #fa9440, #f5f84b, #42ff48, #487af0, #a33bff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% auto;
+    animation: rainbow-move 4s linear infinite;
+    /* 虹色の背後に白い光を薄く敷いて、沈んで見えないようにする */
+    filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.8));
+}
+
+/* 「次のランクまで」列 */
+.p-next-cell {
+    text-align: center;
+    padding-right: 15px;
+    /* ヘッダーの余白と合わせる */
+    vertical-align: middle;
+}
+
+.next-val {
+    font-family: "Segoe UI", Roboto, sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-weight: bold;
+    font-size: 0.85rem;
+    color: #ff5555;
+    /* 不足分は警告色 */
+}
+
+/* 100%達成時の表示を少し控えめに */
+.p-next-cell:has(.next-val:contains("MAX")) {
+    opacity: 0.5;
+}
+
+/* PスコアRating列のスタイル */
+.p-rating-cell {
+    text-align: center;
+    font-weight: bold;
+    color: #333;
+    font-size: 0.9em;
+}
+
+/* Pスコアと達成率のフォント統一を改めて適用 */
+.p-percent,
+.p-values,
+.next-val,
+.p-rating-cell {
+    font-variant-numeric: tabular-nums;
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Pスコア上位50曲の表 */
+.top50-row {
+    background-color: rgba(255, 230, 235, 0.6);
+    /* ほんのり赤い背景 */
+}
+
+/* Ratingセルの文字も少し強調*/
+.top50-row .p-percent {
+    color: #d63384;
+    font-weight: bold;
+}
+
+/* フィルター周り */
+.filter-container select {
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: white;
+}
