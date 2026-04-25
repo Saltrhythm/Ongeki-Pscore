@@ -1,5 +1,5 @@
 /**
- * 最終解決版：記号・全角半角・特殊文字をすべて排除して比較
+ * ＋は維持しつつ、スペース・記号・全角半角の揺れを吸収するロジック
  */
 function doPost(e) {
   try {
@@ -9,18 +9,17 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     
     const constSheet = ss.getSheetByName('譜面定数表');
-    if (!constSheet) return ContentService.createTextOutput("Error: 譜面定数表なし");
-    
     const constValues = constSheet.getDataRange().getValues();
     const constMap = new Map();
     
-    // 文字列を「英数字と日本語のみ」に削ぎ落とす関数
+    // 特定の記号（＋）を守りつつ、他を掃除する関数
     const cleanKey = (str) => {
       if (!str) return "";
-      // 1. 全角を半角にする
-      const half = str.replace(/[！-～]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
-      // 2. スペース、中黒、記号、句読点をすべて削除（漢字・ひらがな・カタカナ・英数字以外を消す）
-      return half.replace(/[^a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g, "").toLowerCase();
+      // 1. 全角英数字を半角にする（Ｓ→sなど）
+      let s = str.replace(/[！-～]/g, (tmp) => String.fromCharCode(tmp.charCodeAt(0) - 0xFEE0));
+      // 2. 「+」以外の記号、スペース、中黒などをすべて削除
+      // [^a-zA-Z0-9+...] の部分で「+」を除外対象から外しています
+      return s.replace(/[^a-zA-Z0-9+\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g, "").toLowerCase();
     };
 
     // 1. 定数表の読み込み
@@ -51,7 +50,7 @@ function doPost(e) {
     dataList.forEach(data => {
       if (data.title.includes("ソロver.") || data.title.includes("ソロ")) return;
 
-      // 送信データ側も徹底的にクリーンアップ
+      // 検索キー作成（＋を保持したままクリーンアップ）
       const searchKey = cleanKey(data.title + data.difficulty + data.level);
       
       let constant = constMap.get(searchKey);
@@ -93,6 +92,8 @@ function doPost(e) {
   }
 }
 
+// calculateTechRating関数はそのまま維持
+
 
 /**
  * 単曲Rating(Tech)の計算ロジック
@@ -125,7 +126,7 @@ function calculateTechRating(score, constant, isFb, combo, rank) {
 }
 
 /**
- * キャッシュ対応・高速読み込み版 doGet
+ * キャッシュ対応・高速読み込み版 doGet (新曲枠対応)
  */
 function doGet(e) {
   const cache = CacheService.getScriptCache();
@@ -141,51 +142,77 @@ function doGet(e) {
       if (cachedList) return createResponse(JSON.parse(cachedList));
 
       const sheets = ss.getSheets();
-      const list = sheets.map(s => s.getName()).filter(n => !["譜面定数表", "Sheet1", "DebugLog"].includes(n));
+      // システム用シートや「新曲枠」を一覧から除外
+      const list = sheets.map(s => s.getName()).filter(n => 
+        !["譜面定数表", "Sheet1", "DebugLog", "新曲枠", "テンプレート"].includes(n)
+      );
 
       try { cache.put(listCacheKey, JSON.stringify(list), 21600); } catch (e) { }
       return createResponse(list);
     }
 
     // --- 2. 個別データの取得 ---
-    const dataCacheKey = "data_" + user;
+    // 構造が変わったため、古いキャッシュと混ざらないようキーを変更 (v2)
+    const dataCacheKey = "data_v2_" + user;
     const cachedData = cache.get(dataCacheKey);
     if (cachedData) return createResponse(JSON.parse(cachedData));
 
-    const sheet = ss.getSheetByName(user);
-    if (!sheet) return createResponse({ error: "Sheet not found" });
+    // A. ユーザー本人のシートを取得
+    const userSheet = ss.getSheetByName(user);
+    if (!userSheet) return createResponse({ error: "User sheet not found: " + user });
 
-    const values = sheet.getDataRange().getValues();
-    const data = values.slice(1).map(row => ({
-      title: row[1],
-      difficulty: row[2],
-      level: row[3],
-      technicalScore: row[4],    // Tech版で使用
-      platinumScore: row[5],     // P版で使用
-      platinumMax: row[6],       // P版で使用
-      constant: row[7],
-      platinumScoreRating: row[8], // P版で使用
-      fbLamp: row[9],            // Tech版で使用
-      comboLamp: row[10],         // Tech版で使用
-      techScoreRating: row[11]   // Tech版で使用
-    }));
+    // B. 新曲枠のリストを取得（A列の合体キーをSetに格納して高速判定）
+    const newSongSheet = ss.getSheetByName("新曲枠");
+    let newSongKeys = new Set();
+    if (newSongSheet) {
+      const newSongValues = newSongSheet.getDataRange().getValues();
+      // 1行目(ヘッダー)を飛ばし、A列(index 0)を文字列としてSetに入れる
+      newSongValues.slice(1).forEach(row => {
+        if (row[0]) newSongKeys.add(String(row[0]).trim());
+      });
+    }
+
+    // C. メインデータの成形
+    const values = userSheet.getDataRange().getValues();
+    const data = values.slice(1).map(row => {
+      const title = String(row[1] || "").trim();
+      const diff = String(row[2] || "").trim();
+      const level = String(row[3] || "").trim();
+      
+      // 新曲枠シートのA列と同じ形式を作成
+      const currentKey = title + diff + level;
+
+      return {
+        title: title,
+        difficulty: diff,
+        level: level,
+        technicalScore: row[4],    // Tech版で使用
+        platinumScore: row[5],     // P版で使用
+        platinumMax: row[6],       // P版で使用
+        constant: row[7],
+        platinumScoreRating: row[8], // P版で使用
+        fbLamp: row[9],             // Tech版で使用
+        comboLamp: row[10],         // Tech版で使用
+        rankLamp: row[11],          // Tech版で使用
+        techScoreRating: row[12],   // Tech版で使用
+        isNew: newSongKeys.has(currentKey) // ★ここが新曲判定
+      };
+    });
 
     const jsonData = JSON.stringify(data);
 
-    // --- 【重要】キャッシュサイズチェック ---
-    // GASのキャッシュは1項目100KB制限があるため、約90KB(90,000文字)以下の場合のみ保存
+    // --- キャッシュサイズチェック (100KB制限対策) ---
     if (jsonData.length < 90000) {
       try {
-        cache.put(dataCacheKey, jsonData, 1200); // 20分間
+        cache.put(dataCacheKey, jsonData, 1200); // 20分間保存
       } catch (err) {
-        console.warn("キャッシュ保存に失敗しました（サイズ等）: " + err.message);
+        console.warn("Cache put failed: " + err.message);
       }
     }
 
     return createResponse(data);
 
   } catch (err) {
-    // 内部エラーが起きても必ずJSON形式で返す（CORSエラー防止）
     return createResponse({ error: err.toString() });
   }
 }
