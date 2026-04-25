@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF=8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オンゲキテクニカルスコア管理ツール</title>
+    <link rel="stylesheet" href="style_tech.css">
+</head>
+
+<body>
+
+    <nav class="tool-navigation">
+        <a href="index_tech.html" class="nav-item">テクニカルスコア版</a>
+        <a href="../pScore/index_platinum.html" class="nav-item active">プラチナスコア版</a>
+    </nav>
+
+    <h1>オンゲキテクニカルスコア管理ツール</h1>
+
+    <div class="t-score-wrapper">
+        <div id="t-score-average" class="t-score-display-box">
+        </div>
+    </div>
+
+
+    <div class="search-container">
+        <div class="filter-controls">
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="user-select" class="filter-label">PLAYER:</label>
+                    <select id="user-select" class="filter-select">
+                        <option value="">読込中...</option>
+                    </select>
+                </div>
+                <input type="text" id="search-input" placeholder="曲名で検索...">
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <button id="clear-filter" class="btn-reset">リセット</button>
+
+                    <details class="filter-dropdown">
+                        <summary class="filter-label">ランプ</summary>
+                        <div class="checkbox-container">
+                            <label><input type="checkbox" class="combo-filter" value="AB+" checked> AB+</label>
+                            <label><input type="checkbox" class="combo-filter" value="AB" checked> AB</label>
+                            <label><input type="checkbox" class="combo-filter" value="FC" checked> FC</label>
+                            <label><input type="checkbox" class="combo-filter" value="None" checked> ランプなし</label>
+                        </div>
+                    </details>
+
+                    <label for="rank-filter" class="filter-label">Rank</label>
+                    <select id="rank-filter" class="filter-select">
+                        <option value="all">すべて</option>
+                        <option value="sssplus">SSS+</option>
+                        <option value="sss">SSS</option>
+                        <option value="ss">SS</option>
+                        <option value="s">S</option>
+                    </select>
+
+                    <label for="min-constant" class="filter-label">定数</label>
+                    <select id="min-constant" class="filter-select"></select>
+                    <span class="range-separator">〜</span>
+                    <select id="max-constant" class="filter-select"></select>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <span class="filter-label">ソートの種類:</span>
+                    <button id="sort-tRating" class="btn-sort active">Rating順</button>
+                    <button id="sort-score" class="btn-sort">スコア順</button>
+                </div>
+                <div class="filter-group" style="margin-left: 15px;">
+                    <span class="filter-label">対象:</span>
+                    <button id="filter-all" class="btn-filter active">全曲</button>
+                    <button id="filter-old" class="btn-filter">旧曲</button>
+                    <button id="filter-new" class="btn-filter">新曲</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="loading">データを取得中...</div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%; text-align: left;">楽曲情報</th>
+                    <th style="width: 12.5%; text-align: center;">ランプ</th>
+                    <th style="width: 25.5%; text-align: center;">スコア</th>
+                    <th style="width: 22%; text-align: center;">単曲レート</th>
+                </tr>
+            </thead>
+
+            <tbody id="score-body"></tbody>
+        </table>
+    </div>
+
+    <script src="script_tech.js"></script>
+</body>
+
+</html>
