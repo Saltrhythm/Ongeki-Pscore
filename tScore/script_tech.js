@@ -162,18 +162,17 @@ function updateFilters() {
             matchesRank = (currentRank === rankValue);
         }
 
-        // ランプの判定ロジック
+        // ランプ判定
         const itemLamp = item.comboLamp || "None";
-        const itemPower = LAMP_STRENGTH[itemLamp] ?? 0;
 
         let matchesLamp = false;
         if (selectedLamps.length === 0) {
-            matchesLamp = false; // 何もチェックされてなければ表示しない
+            matchesLamp = false;
         } else {
-            // チェックされている中で一番低いランクを基準にする
-            const minPower = Math.min(...selectedLamps.map(val => LAMP_STRENGTH[val]));
-            matchesLamp = (itemPower >= minPower);
+            // 修正ポイント：選択されたランプのリスト（例：["AB+", "AB"]）に、その曲のランプが含まれているか
+            matchesLamp = selectedLamps.includes(itemLamp);
         }
+
         // 表示対象（全曲/旧曲/新曲）判定
         let matchesType = true;
         if (currentTypeFilter === 'old') matchesType = !item.isNew;
